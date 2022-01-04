@@ -65,7 +65,7 @@ func (kpd *KPD) primarykey(pre []byte, key []byte) []byte {
 	return data
 }
 
-func (kpd *KPD) MapCollection(key string, private string, data string) {
+func (kpd *KPD) MapCollection(key string, private string, data string) []byte {
 	var akey map[string]string
 	//var akey map[byte]byte
 	if err := json.Unmarshal([]byte(key), &akey); err != nil {
@@ -79,10 +79,10 @@ func (kpd *KPD) MapCollection(key string, private string, data string) {
 	if err := json.Unmarshal([]byte(data), &adata); err != nil {
 		panic(err)
 	}
-	kpd.Createcollection(akey, aprivate, adata)
+	return kpd.Createcollection(akey, aprivate, adata)
 }
 
-func (kpd *KPD) Createcollection(key map[string]string, private map[string]string, data map[string]string) {
+func (kpd *KPD) Createcollection(key map[string]string, private map[string]string, data map[string]string) []byte {
 	db, err := leveldb.OpenFile(kpd.name, nil)
 	if err != nil {
 	}
@@ -94,7 +94,7 @@ func (kpd *KPD) Createcollection(key map[string]string, private map[string]strin
 	}
 	keyWordID := kpd.fridke([]byte(k), []byte(v))
 	collectionID, err := db.Get(keyWordID, nil)
-	log.Println("@acollectionID", collectionID)
+
 	if err != nil {
 		var ak, av string
 		for ak, av = range private {
@@ -105,7 +105,7 @@ func (kpd *KPD) Createcollection(key map[string]string, private map[string]strin
 			break
 		}
 		collectionID = kpd.fridke([]byte(k), []byte(ak+av+k+v))
-		log.Println("@bcollectionID", collectionID)
+
 		db.Put(keyWordID, collectionID, nil)
 	}
 
@@ -118,9 +118,8 @@ func (kpd *KPD) Createcollection(key map[string]string, private map[string]strin
 			log.Println("posible error primary key exist")
 		}
 	}
-	log.Println("@ccollectionID", collectionID)
+
 	rawcollection, err := db.Get(collectionID, nil)
-	log.Println("@rawcollection", rawcollection)
 	if err != nil {
 		kpd.indexer(key, collectionID, db)
 		kpd.indexer(data, collectionID, db)
@@ -138,7 +137,7 @@ func (kpd *KPD) Createcollection(key map[string]string, private map[string]strin
 		}
 		d, _ := json.Marshal(merge)
 		db.Put(collectionID, d, nil)
-		return
+		return collectionID
 	}
 
 	collection := make(map[string]string)
@@ -156,8 +155,6 @@ func (kpd *KPD) Createcollection(key map[string]string, private map[string]strin
 			if val != v {
 				rem_v = append(rem_v, val)
 				new_v = append(new_v, v)
-				log.Println("@rem", rem_v)
-				log.Println("@add", new_v)
 			}
 		} else {
 			newpair[k] = v
@@ -173,8 +170,7 @@ func (kpd *KPD) Createcollection(key map[string]string, private map[string]strin
 	kpd.remw(rem_v, collectionID, db) //TODO rem no work
 	kpd.addw(new_v, collectionID, db)
 	kpd.indexer(newpair, collectionID, db)
-
-	log.Println("creado")
+	return collectionID
 }
 func (kpd *KPD) Keycollection(name string) [][]byte {
 
@@ -226,12 +222,53 @@ func (kpd *KPD) Wordcollection(name string) [][]byte {
 	}
 	return collection
 }
-func contains() {
+func (kpd *KPD) Contains(key string, word string) [][]byte {
+	db, err := leveldb.OpenFile(kpd.name, nil)
+	if err != nil {
+	}
+	defer db.Close()
 
+	words := strings.Split(word, " ")
+
+	keyb := kpd.fridke([]byte("key:"), []byte(key))
+	collectionkey, err := db.Get(keyb, nil)
+	if err != nil {
+		return make([][]byte, 0)
+	}
+
+	ready := make(map[string]string)
+	var collection [][]byte
+	step := int(kpd.fragment)
+	for i := 0; i < len(collectionkey); i += step {
+		for _, w := range words {
+			wordb := kpd.fridke([]byte("word:"), []byte(w))
+			Wordcollection, err := db.Get(wordb, nil)
+			if err != nil {
+				return make([][]byte, 0)
+			}
+			tempk := collectionkey[i : i+step]
+			temps := string(tempk)
+			if _, ok := ready[temps]; !ok {
+				if bytes.Contains(Wordcollection, tempk) {
+					ready[temps] = ""
+					temp, err := db.Get(tempk, nil)
+					if err != nil {
+					} else {
+						collection = append(collection, temp)
+					}
+				}
+			}
+		}
+	}
+	return collection
 }
 
-func changePrimarys() {}
-func removeKey()      {}
+func changePrimarys() {
+
+}
+func removeKey() {
+
+}
 
 func (kpd *KPD) addw(data []string, collectionID []byte, db *leveldb.DB) {
 
@@ -241,10 +278,8 @@ func (kpd *KPD) addw(data []string, collectionID []byte, db *leveldb.DB) {
 			tempw := kpd.fridke([]byte("word:"), []byte(s))
 			collectionval, err := db.Get(tempw, nil)
 			if err != nil {
-				log.Println("@appendwa")
 				db.Put(tempw, collectionID, nil)
 			} else {
-				log.Println("@appendw", append(collectionval, collectionID...))
 				db.Put(tempw, append(collectionval, collectionID...), nil)
 			}
 		}
@@ -287,7 +322,6 @@ func (kpd *KPD) indexer(data map[string]string, collectionID []byte, db *leveldb
 			if err != nil {
 				db.Put(tempv, collectionID, nil)
 			} else {
-				log.Println("@append", append(collectionval, collectionID...))
 				db.Put(tempv, append(collectionval, collectionID...), nil)
 			}
 		}
