@@ -50,24 +50,25 @@ func (kpd *KPD) CollectionByPrimaryKey(pre []byte, key []byte) ([]byte, error) {
 
 	collectionID, err := db.Get(primarykey, nil)
 	if err != nil {
-		return nil, errors.New("No existe esta llave")
+		return nil, errors.New("No key exist")
 	}
 	data, err := db.Get(collectionID, nil)
 	if err != nil {
-		return nil, errors.New("No existe la colleccion")
 	}
 	return data, nil
 }
-func (kpd *KPD) CollectionKey(name string) [][]byte {
+func (kpd *KPD) CollectionKey(name string) ([][]byte, error) {
 
 	db, err := leveldb.OpenFile(kpd.name, nil)
 	if err != nil {
+		return nil, errors.New("Failed to load or create database")
 	}
 	defer db.Close()
 
 	tempkey := kpd.fridke([]byte("key:"), []byte(name))
 	collectionword, err := db.Get(tempkey, nil)
 	if err != nil {
+		return nil, errors.New("No key exist")
 	}
 
 	step := int(kpd.fragment)
@@ -81,18 +82,20 @@ func (kpd *KPD) CollectionKey(name string) [][]byte {
 			collection = append(collection, temp)
 		}
 	}
-	return collection
+	return collection, nil
 }
-func (kpd *KPD) CollectionWord(name string) [][]byte {
+func (kpd *KPD) CollectionWord(name string) ([][]byte, error) {
 
 	db, err := leveldb.OpenFile(kpd.name, nil)
 	if err != nil {
+		return nil, errors.New("Failed to load or create database")
 	}
 	defer db.Close()
 
 	tempkey := kpd.fridke([]byte("word:"), []byte(name))
 	collectionword, err := db.Get(tempkey, nil)
 	if err != nil {
+		return nil, errors.New("No word exist")
 	}
 
 	step := int(kpd.fragment)
@@ -106,11 +109,12 @@ func (kpd *KPD) CollectionWord(name string) [][]byte {
 			collection = append(collection, temp)
 		}
 	}
-	return collection
+	return collection, nil
 }
-func (kpd *KPD) CollectionContains(key string, word string) [][]byte {
+func (kpd *KPD) CollectionContains(key string, word string) ([][]byte, error) {
 	db, err := leveldb.OpenFile(kpd.name, nil)
 	if err != nil {
+		return nil, errors.New("Failed to load or create database")
 	}
 	defer db.Close()
 
@@ -119,7 +123,7 @@ func (kpd *KPD) CollectionContains(key string, word string) [][]byte {
 	keyb := kpd.fridke([]byte("key:"), []byte(key))
 	collectionkey, err := db.Get(keyb, nil)
 	if err != nil {
-		return make([][]byte, 0)
+		return make([][]byte, 0), nil
 	}
 
 	ready := make(map[string]string)
@@ -130,7 +134,7 @@ func (kpd *KPD) CollectionContains(key string, word string) [][]byte {
 			wordb := kpd.fridke([]byte("word:"), []byte(w))
 			Wordcollection, err := db.Get(wordb, nil)
 			if err != nil {
-				return make([][]byte, 0)
+				return make([][]byte, 0), nil
 			}
 			tempk := collectionkey[i : i+step]
 			temps := string(tempk)
@@ -146,21 +150,21 @@ func (kpd *KPD) CollectionContains(key string, word string) [][]byte {
 			}
 		}
 	}
-	return collection
+	return collection, nil
 }
 func (kpd *KPD) UpdateKeyCollection(key string) error {
 	//TODO: change the principal PrimariKey of collection to new
 	//this version only add new PrimaryKeys
 	db, err := leveldb.OpenFile(kpd.name, nil)
 	if err != nil {
-		return err
+		return errors.New("Failed to load or create database")
 	}
 	defer db.Close()
 
 	var akey map[string]string
 	//var akey map[byte]byte
 	if err := json.Unmarshal([]byte(key), &akey); err != nil {
-		panic(err)
+		return errors.New("Invalid key JSON string")
 	}
 
 	var k, v string
@@ -186,8 +190,7 @@ func (kpd *KPD) RemoveCollection(pre []byte, key []byte) error {
 
 	db, err := leveldb.OpenFile(kpd.name, nil)
 	if err != nil {
-		log.Println("err failed to load or create database")
-		return nil
+		return errors.New("Failed to load or create database")
 	}
 	defer db.Close()
 
@@ -195,18 +198,14 @@ func (kpd *KPD) RemoveCollection(pre []byte, key []byte) error {
 
 	collectionID, err := db.Get(primarykey, nil)
 	if err != nil {
-		log.Println("no existe esta llave")
-		return nil
+		return errors.New("No exist key")
 	}
 	data, err := db.Get(collectionID, nil)
 	if err != nil {
-		log.Println("no existe la colleccion")
-		return nil
 	}
 
 	var tasher map[string]string
 	if err := json.Unmarshal(data, &tasher); err != nil {
-		panic(err)
 	}
 
 	for k, v := range tasher {
