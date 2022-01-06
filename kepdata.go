@@ -38,7 +38,7 @@ func (kpd *KPD) MapCollection(key string, private string, data string) ([]byte, 
 	}
 	return kpd.collection(akey, aprivate, adata), nil
 }
-func (kpd *KPD) CollectionByPrimaryKey(pre []byte, key []byte) ([]byte, error) {
+func (kpd *KPD) CollectionByPrimaryKey(pre []byte, key []byte) (map[string]string, error) {
 
 	db, err := leveldb.OpenFile(kpd.name, nil)
 	if err != nil {
@@ -55,7 +55,10 @@ func (kpd *KPD) CollectionByPrimaryKey(pre []byte, key []byte) ([]byte, error) {
 	data, err := db.Get(collectionID, nil)
 	if err != nil {
 	}
-	return data, nil
+	var person map[string]string
+	if err := json.Unmarshal(data, &person); err != nil {
+	}
+	return person, nil
 }
 func (kpd *KPD) CollectionKey(name string) ([][]byte, error) {
 
