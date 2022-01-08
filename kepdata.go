@@ -278,7 +278,7 @@ func (kpd *KPD) collection(key map[string]string, private map[string]string, dat
 		kpd.indexer(data, collectionID, db)
 
 		merge := make(map[string]string)
-
+		merge["id"] = string(collectionID)
 		for k, v := range key {
 			merge[k] = v
 		}
@@ -288,6 +288,7 @@ func (kpd *KPD) collection(key map[string]string, private map[string]string, dat
 		for k, v := range data {
 			merge[k] = v
 		}
+
 		d, _ := json.Marshal(merge)
 		db.Put(collectionID, d, nil)
 		return collectionID
@@ -372,8 +373,13 @@ func (kpd *KPD) indexer(data map[string]string, collectionID []byte, db *leveldb
 			db.Put(tempk, append(collectionkey, collectionID...), nil)
 		}
 
+		one := make(map[string]bool)
 		splits := strings.Split(v, kpd.spliter)
 		for _, s := range splits {
+			one[s] = false
+		}
+
+		for s := range one {
 			tempv := kpd.fridke([]byte("word:"), []byte(s))
 			collectionval, err := db.Get(tempv, nil)
 			if err != nil {
