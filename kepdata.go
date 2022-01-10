@@ -3,6 +3,7 @@ package kepdata
 import (
 	"bytes"
 	"crypto/sha256"
+	b64 "encoding/base64"
 	"encoding/json"
 	"errors"
 	"log"
@@ -59,6 +60,25 @@ func (kpd *KPD) CollectionByPrimaryKey(pre []byte, key []byte) (map[string]strin
 	if err := json.Unmarshal(data, &person); err != nil {
 	}
 	return person, nil
+}
+func (kpd *KPD) CollectionByPrimaryKeyByte(pre []byte, key []byte) ([]byte, error) {
+
+	db, err := leveldb.OpenFile(kpd.name, nil)
+	if err != nil {
+		return nil, errors.New("Failed to load or create database")
+	}
+	defer db.Close()
+
+	primarykey := kpd.fridke(pre, key)
+
+	collectionID, err := db.Get(primarykey, nil)
+	if err != nil {
+		return nil, errors.New("No key exist")
+	}
+	data, err := db.Get(collectionID, nil)
+	if err != nil {
+	}
+	return data, nil
 }
 func (kpd *KPD) CollectionKey(name string) ([][]byte, error) {
 
@@ -278,7 +298,8 @@ func (kpd *KPD) collection(key map[string]string, private map[string]string, dat
 		kpd.indexer(data, collectionID, db)
 
 		merge := make(map[string]string)
-		merge["id"] = string(collectionID)
+
+		merge["id"] = b64.URLEncoding.EncodeToString(collectionID)
 		for k, v := range key {
 			merge[k] = v
 		}
