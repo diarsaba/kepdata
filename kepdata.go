@@ -255,13 +255,12 @@ func (kpd *KPD) RemoveCollection(pre []byte, key []byte) error {
 
 	return db.Delete(collectionID, nil)
 }
-func (kpd *KPD) Get(key []byte) []byte {
+func (kpd *KPD) Get(key []byte) ([]byte, error) {
 	db, err := leveldb.OpenFile(kpd.name, nil)
 	if err != nil {
 	}
 	defer db.Close()
-	data, err := db.Get(key, nil)
-	return data
+	return db.Get(key, nil)
 }
 func (kpd *KPD) Put(key []byte, value []byte) {
 	db, err := leveldb.OpenFile(kpd.name, nil)
