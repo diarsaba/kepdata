@@ -255,6 +255,21 @@ func (kpd *KPD) RemoveCollection(pre []byte, key []byte) error {
 
 	return db.Delete(collectionID, nil)
 }
+func (kpd *KPD) Get(key []byte) []byte {
+	db, err := leveldb.OpenFile(kpd.name, nil)
+	if err != nil {
+	}
+	defer db.Close()
+	data, err := db.Get(key, nil)
+	return data
+}
+func (kpd *KPD) Put(key []byte, value []byte) {
+	db, err := leveldb.OpenFile(kpd.name, nil)
+	if err != nil {
+	}
+	defer db.Close()
+	db.Put(key, value, nil)
+}
 func (kpd *KPD) collection(key map[string]string, private map[string]string, data map[string]string) []byte {
 	db, err := leveldb.OpenFile(kpd.name, nil)
 	if err != nil {
