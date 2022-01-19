@@ -353,6 +353,9 @@ func (kpd *KPD) collection(key map[string]string, private map[string]string, dat
 	for k, v := range data {
 		collection[k] = v
 	}
+	for k, v := range private {
+		collection[k] = v
+	}
 	d, _ := json.Marshal(collection)
 	db.Put(collectionID, d, nil)
 
