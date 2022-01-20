@@ -20,7 +20,8 @@ type KPD struct {
 
 //return "", errors.New("empty name")
 func DB(ms string, spliter string, fragment uint8) KPD {
-	return KPD{ms, fragment, spliter}
+	name := strings.Join([]string{ms, ".kpd"}, "")
+	return KPD{name, fragment, spliter}
 }
 
 func (kpd *KPD) MapCollection(key string, private string, data string) ([]byte, error) {
